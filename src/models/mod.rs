@@ -3,6 +3,7 @@ pub mod campus;
 pub mod college;
 pub mod group;
 pub mod lesson;
+pub mod requests;
 pub mod schedule;
 
 pub use call::Call;
