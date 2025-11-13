@@ -14,7 +14,7 @@ pub use lesson::Lesson;
 pub use schedule::Schedule;
 
 pub enum Week {
-    Previus,
+    Previous,
     Current,
     Next,
 }
@@ -22,7 +22,7 @@ pub enum Week {
 pub enum Weekday {
     Monday,
     Tuesday,
-    Wednessday,
+    Wednesday,
     Thursday,
     Friday,
     Saturday,

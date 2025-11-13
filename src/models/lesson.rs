@@ -1,11 +1,14 @@
+use chrono::NaiveTime;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Lesson {
-    pub lesson_id: u32,
-    pub group_id: u32,
-    pub order: u32,
     pub title: String,
-    pub teacher: String,
     pub cabinet: String,
+    pub teacher: String,
+    pub order: u32,
+    #[serde(rename = "startTime", with = "crate::utils::time_serde")]
+    pub start_time: NaiveTime,
+    #[serde(rename = "endTime", with = "crate::utils::time_serde")]
+    pub end_time: NaiveTime,
 }
