@@ -37,3 +37,42 @@ impl Error {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_from_response_with_json() {
+        let body = r#"{"error": "Not found"}"#.to_string();
+        let error = Error::from_response(404, body);
+
+        match error {
+            Error::Api {
+                status_code,
+                message,
+            } => {
+                assert_eq!(status_code, 404);
+                assert_eq!(message, "Not found");
+            }
+            _ => panic!("Expected Api error"),
+        }
+    }
+
+    #[test]
+    fn test_error_from_response_with_plain_text() {
+        let body = "Internal Server Error".to_string();
+        let error = Error::from_response(500, body);
+
+        match error {
+            Error::Api {
+                status_code,
+                message,
+            } => {
+                assert_eq!(status_code, 500);
+                assert_eq!(message, "Internal Server Error");
+            }
+            _ => panic!("Expected Api error"),
+        }
+    }
+}

@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use crate::{Campus, Client, College, api::groups::GroupsQuery, error::Result};
 use urlencoding::encode;
 
@@ -19,23 +17,12 @@ impl<'a> CollegesQuery<'a> {
     }
 
     pub async fn send(self) -> Result<Vec<College>> {
-        let url = "/colleges";
-        let mut request = self
-            .client
-            .http_client
-            .get(&format!("{}{}", self.client.base_url, url));
-        if let Some(name) = self.name {
-            request = request.query(&[("name", name)]);
-        }
-        let response = request.send().await?;
-        let status = response.status();
-
-        if status.is_success() {
-            Ok(response.json().await?)
+        let path = if let Some(name) = self.name {
+            format!("/colleges?name={}", name)
         } else {
-            let body = response.text().await?;
-            Err(crate::Error::from_response(status.as_u16(), body))
-        }
+            "/colleges".to_string()
+        };
+        self.client.get_json(&path).await
     }
 
     pub fn college(self, college_id: u32) -> CollegeQuery<'a> {

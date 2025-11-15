@@ -48,25 +48,29 @@ impl<'a> ScheduleQuery<'a> {
     }
 
     pub async fn send(self) -> Result<Vec<Schedule>> {
-        self.validate()?;
+        let mut params = Vec::new();
 
-        let url = format!(
-            "{}/groups/{}/schedules",
-            self.client.base_url, self.group_id
-        );
-        let mut request = self.client.http_client.get(&url);
-
-        request = self.add_query_params(request);
-
-        let response = request.send().await?;
-        let status = response.status();
-
-        if status.is_success() {
-            Ok(response.json().await?)
-        } else {
-            let body = response.text().await?;
-            Err(crate::error::Error::from_response(status.as_u16(), body))
+        if let Some(date) = self.date {
+            params.push(format!("date={}", date));
         }
+        if let Some(day) = self.day {
+            params.push(format!("day={}", day));
+        }
+        if let Some(week) = self.week {
+            params.push(format!("week={}", week));
+        }
+        if let Some(weekday) = self.weekday {
+            params.push(format!("weekday={}", weekday));
+        }
+
+        let query = if params.is_empty() {
+            "".to_string()
+        } else {
+            format!("?{}", params.join("&"))
+        };
+
+        let path = format!("/groups/{}/schedules{}", self.group_id, query);
+        self.client.get_json(&path).await
     }
 
     fn validate(&self) -> Result<()> {
@@ -125,5 +129,30 @@ impl<'a> ScheduleQuery<'a> {
         }
 
         request
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_schedule_query_validation() {
+        let client = Client::new("https://api.example.com");
+        let query = ScheduleQuery::new(&client, 1)
+            .date("2023-01-01")
+            .week(Week::Current);
+
+        let result = query.validate();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_schedule_query_validation_success() {
+        let client = Client::new("https://api.example.com");
+        let query = ScheduleQuery::new(&client, 1).date("2023-01-01");
+
+        let result = query.validate();
+        assert!(result.is_ok());
     }
 }

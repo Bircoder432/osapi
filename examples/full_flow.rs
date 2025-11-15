@@ -2,9 +2,15 @@ use osapi::{Client, Error};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    #[cfg(feature = "logging")]
+    osapi::logging::init();
     let client = Client::new("https://api.thisishyum.ru/schedule_api/tyumen/").with_college(1);
 
-    let campuses = client.campuses()?.send().await?;
+    let campuses = client
+        .campuses()?
+        .name("Луначарского 2 курс")
+        .send()
+        .await?;
 
     println!("Найдено кампусов: {}", campuses.len());
     for campus in &campuses {
@@ -12,7 +18,7 @@ async fn main() -> Result<(), Error> {
     }
 
     if let Some(campus) = campuses.first() {
-        let groups = client.groups(campus.id).send().await?;
+        let groups = client.groups(campus.id).name("ИС-24-2").send().await?;
 
         println!("\nНайдено групп: {}", groups.len());
         for group in &groups {

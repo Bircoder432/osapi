@@ -23,25 +23,12 @@ impl<'a> GroupsQuery<'a> {
     }
 
     pub async fn send(self) -> Result<Vec<Group>> {
-        let url = format!("/campuses/{}/groups", self.campus_id);
-        let mut request = self
-            .client
-            .http_client
-            .get(&format!("{}{}", self.client.base_url, url));
-
-        if let Some(name) = self.name {
-            request = request.query(&[("name", name)]);
-        }
-
-        let response = request.send().await?;
-        let status = response.status();
-
-        if status.is_success() {
-            Ok(response.json().await?)
+        let path = if let Some(name) = self.name {
+            format!("/campuses/{}/groups?name={}", self.campus_id, name)
         } else {
-            let body = response.text().await?;
-            Err(crate::error::Error::from_response(status.as_u16(), body))
-        }
+            format!("/campuses/{}/groups", self.campus_id)
+        };
+        self.client.get_json(&path).await
     }
 
     pub fn group(self, group_id: u32) -> GroupQuery<'a> {
