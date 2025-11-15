@@ -1,5 +1,5 @@
 // tests/lesson.rs
-use osapi::models::Lesson;
+use osars::models::Lesson;
 
 #[test]
 fn parse_camel_case_time() {

@@ -1,4 +1,4 @@
-use osapi::{Campus, Client, College, Group, Schedule};
+use osars::{Campus, Client, College, Group, Schedule};
 
 #[tokio::test]
 async fn test_client_workflow() {
