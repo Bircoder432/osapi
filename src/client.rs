@@ -1,3 +1,8 @@
+use crate::Auth;
+use crate::api::{CampusQuery, CampusesQuery, CollegeQuery, CollegesQuery};
+use crate::auth::AuthenticatedClient;
+use crate::error::Result;
+use crate::{GroupsQuery, ScheduleQuery, error::Error};
 /// A client for interacting with the educational schedule API.
 ///
 /// The `Client` provides methods to query colleges, campuses, groups, and schedules.
@@ -13,10 +18,6 @@
 /// ```
 #[cfg(feature = "logging")]
 use tracing::{debug, error};
-
-use crate::api::{CampusQuery, CampusesQuery, CollegeQuery, CollegesQuery};
-use crate::error::Result;
-use crate::{GroupsQuery, ScheduleQuery, error::Error};
 
 #[derive(Debug, Clone)]
 pub struct Client {
@@ -216,6 +217,95 @@ impl Client {
             ))
         }
     }
+    pub(crate) async fn post_json<T, B>(
+        &self,
+        path: &str,
+        body: Option<&B>,
+        auth: Option<&Auth>,
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: serde::Serialize,
+    {
+        let url = format!("{}{}", self.base_url, path);
+        #[cfg(feature = "logging")]
+        debug!("POST {}", url);
+
+        let mut request = self.http_client.post(&url);
+
+        if let Some(auth) = auth {
+            request = auth.apply_to_request(request);
+        }
+
+        if let Some(body) = body {
+            request = request.json(body);
+        }
+
+        let response = request.send().await.map_err(crate::error::Error::Reqwest)?;
+
+        self.handle_response(response).await
+    }
+
+    pub(crate) async fn delete_json<T>(&self, path: &str, auth: Option<&Auth>) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let url = format!("{}{}", self.base_url, path);
+        #[cfg(feature = "logging")]
+        debug!("DELETE {}", url);
+
+        let mut request = self.http_client.delete(&url);
+
+        if let Some(auth) = auth {
+            request = auth.apply_to_request(request);
+        }
+
+        let response = request.send().await.map_err(crate::error::Error::Reqwest)?;
+
+        self.handle_response(response).await
+    }
+
+    async fn handle_response<T>(&self, response: reqwest::Response) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let status = response.status();
+        let raw_body = response
+            .text()
+            .await
+            .map_err(crate::error::Error::Reqwest)?;
+
+        #[cfg(feature = "logging")]
+        {
+            if status.is_success() {
+                debug!("Success {}: raw response = {}", status, raw_body);
+            } else {
+                error!("API error {}: raw response = {}", status, raw_body);
+            }
+        }
+
+        if status.is_success() {
+            if raw_body.is_empty() {
+                // Handle empty response for DELETE and some POST requests
+                serde_json::from_str("null").map_err(|e| {
+                    #[cfg(feature = "logging")]
+                    error!("JSON parse error for empty response: {}", e);
+                    crate::error::Error::Serialization(e)
+                })
+            } else {
+                serde_json::from_str(&raw_body).map_err(|e| {
+                    #[cfg(feature = "logging")]
+                    error!("JSON parse error: {}\nRaw body: {}", e, raw_body);
+                    crate::error::Error::Serialization(e)
+                })
+            }
+        } else {
+            Err(crate::error::Error::from_response(
+                status.as_u16(),
+                raw_body,
+            ))
+        }
+    }
 
     /// Creates a query to list groups for a campus.
     ///
@@ -251,6 +341,10 @@ impl Client {
     /// * `group_id` - The ID of the student group
     pub fn tomorrow(&self, group_id: u32) -> ScheduleQuery {
         self.schedule(group_id).tomorrow()
+    }
+    /// Create an authenticated client for private endpoints
+    pub fn authenticated(&self) -> AuthenticatedClient {
+        AuthenticatedClient::new(self.clone())
     }
 }
 

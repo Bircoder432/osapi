@@ -11,6 +11,7 @@ pub use campus::Campus;
 pub use college::College;
 pub use group::Group;
 pub use lesson::Lesson;
+pub use requests::*;
 pub use schedule::Schedule;
 use std::fmt;
 
