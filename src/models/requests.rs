@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateGroupsRequest {
+    #[serde(rename = "campusId")]
     pub campus_id: u32,
+    #[serde(rename = "studentGroupNames")]
     pub student_group_names: Vec<String>,
 }
 
@@ -32,6 +34,7 @@ pub struct UpdateLessonsRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LessonRequest {
+    #[serde(rename = "groupId")]
     pub group_id: u32,
     pub order: u32,
     pub title: String,
