@@ -1,4 +1,4 @@
-use osapi::{Client, Error};
+use osars::{Client, Error};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
