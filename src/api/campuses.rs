@@ -3,17 +3,42 @@ use crate::{Campus, Client, error::Result, groups::GroupQuery};
 pub struct CampusesQuery<'a> {
     client: &'a Client,
     college_id: u32,
+    name: Option<String>,
 }
 
 impl<'a> CampusesQuery<'a> {
     pub fn new(client: &'a Client, college_id: u32) -> Self {
-        Self { client, college_id }
+        Self {
+            client,
+            college_id,
+            name: None,
+        }
     }
 
+    pub fn name(mut self, name: &str) -> Self {
+        self.name = Some(name.to_string());
+        self
+    }
     pub async fn send(self) -> Result<Vec<Campus>> {
-        self.client
-            .get_json(&format!("/colleges/{}/campuses", self.college_id))
-            .await
+        let url = format!("/colleges/{}/campuses", self.college_id);
+        let mut request = self
+            .client
+            .http_client
+            .get(&format!("{}{}", self.client.base_url, url));
+
+        if let Some(name) = self.name {
+            request = request.query(&[("name", name)]);
+        }
+
+        let response = request.send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            let body = response.text().await?;
+            Err(crate::error::Error::from_response(status.as_u16(), body))
+        }
     }
 
     pub fn campus(self, campus_id: u32) -> CampusQuery<'a> {

@@ -7,7 +7,7 @@ use crate::{GroupsQuery, ScheduleQuery};
 #[derive(Debug, Clone)]
 pub struct Client {
     pub(crate) base_url: String,
-    pub(crate) http_client: reqwest::Client,
+    pub http_client: reqwest::Client,
     pub(crate) default_college_id: Option<u32>,
 }
 

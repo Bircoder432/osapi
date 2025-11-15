@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Call {
+    #[serde(rename = "callId")]
     pub call_id: u32,
     pub weekday: u8,
     #[serde(with = "crate::utils::time_serde")]

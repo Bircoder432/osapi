@@ -5,17 +5,43 @@ use crate::{Client, Group, error::Result};
 pub struct GroupsQuery<'a> {
     client: &'a Client,
     campus_id: u32,
+    name: Option<String>,
 }
 
 impl<'a> GroupsQuery<'a> {
     pub fn new(client: &'a Client, campus_id: u32) -> Self {
-        Self { client, campus_id }
+        Self {
+            client,
+            campus_id,
+            name: None,
+        }
+    }
+
+    pub fn name(mut self, name: &str) -> Self {
+        self.name = Some(name.to_string());
+        self
     }
 
     pub async fn send(self) -> Result<Vec<Group>> {
-        self.client
-            .get_json(&format!("/campuses/{}/groups", self.campus_id))
-            .await
+        let url = format!("/campuses/{}/groups", self.campus_id);
+        let mut request = self
+            .client
+            .http_client
+            .get(&format!("{}{}", self.client.base_url, url));
+
+        if let Some(name) = self.name {
+            request = request.query(&[("name", name)]);
+        }
+
+        let response = request.send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            let body = response.text().await?;
+            Err(crate::error::Error::from_response(status.as_u16(), body))
+        }
     }
 
     pub fn group(self, group_id: u32) -> GroupQuery<'a> {
