@@ -125,7 +125,7 @@ impl Client {
     /// ```
     pub fn college(&self) -> Result<CollegeQuery> {
         let college_id = self.default_college_id.ok_or_else(|| {
-            Error::Validation(("No default college set. Use client.with_college() first".into()))
+            Error::Validation("No default college set. Use client.with_college() first".into())
         })?;
         Ok(CollegeQuery::new(self, college_id))
     }
