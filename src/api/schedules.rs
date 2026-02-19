@@ -103,7 +103,7 @@ impl<'a> ScheduleQuery<'a> {
 
         let query = self.build_query_string();
         let path = format!("/groups/{}/schedules{}", self.group_id, query);
-        let url = format!("{}{}", self.client.base_url(), path);
+        let _url = format!("{}{}", self.client.base_url(), path);
 
         #[cfg(feature = "logging")]
         tracing::info!("ScheduleQuery URL: {}", url);

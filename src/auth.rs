@@ -1,6 +1,5 @@
 use crate::AdminApi;
 use crate::ParserApi;
-use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct Auth {

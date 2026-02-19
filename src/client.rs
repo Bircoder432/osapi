@@ -140,7 +140,7 @@ impl Client {
     /// let client = Client::new("https://api.example.com");
     /// let colleges_query = client.colleges();
     /// ```
-    pub fn colleges(&self) -> CollegesQuery {
+    pub fn colleges(&self) -> CollegesQuery<'_> {
         CollegesQuery::new(self)
     }
 
@@ -149,7 +149,7 @@ impl Client {
     /// # Errors
     ///
     /// Returns `Error::Validation` if no default college is set.
-    pub fn college(&self) -> Result<crate::api::CollegeQuery> {
+    pub fn college(&self) -> Result<crate::api::CollegeQuery<'_>> {
         let college_id = self.default_college_id.ok_or_else(|| {
             Error::Validation("No default college set. Use client.with_college() first".into())
         })?;
@@ -161,7 +161,7 @@ impl Client {
     /// # Errors
     ///
     /// Returns `Error::Validation` if no default college is set.
-    pub fn campuses(&self) -> Result<CampusesQuery> {
+    pub fn campuses(&self) -> Result<CampusesQuery<'_>> {
         let college_id = self.default_college_id.ok_or_else(|| {
             Error::Validation("No default college set. Use client.with_college() first".into())
         })?;
@@ -171,7 +171,7 @@ impl Client {
     /// Creates a query for a specific campus.
     ///
     /// Note: This does not require a default college to be set.
-    pub fn campus(&self, campus_id: u32) -> crate::api::CampusQuery {
+    pub fn campus(&self, campus_id: u32) -> crate::api::CampusQuery<'_> {
         crate::api::CampusQuery::new(self, campus_id)
     }
 
@@ -180,7 +180,7 @@ impl Client {
     /// # Arguments
     ///
     /// * `campus_id` - The ID of the campus
-    pub fn groups(&self, campus_id: u32) -> GroupsQuery {
+    pub fn groups(&self, campus_id: u32) -> GroupsQuery<'_> {
         GroupsQuery::new(self, campus_id)
     }
 
@@ -198,7 +198,7 @@ impl Client {
     /// # Arguments
     ///
     /// * `group_id` - The ID of the student group
-    pub fn today(&self, group_id: u32) -> ScheduleQuery {
+    pub fn today(&self, group_id: u32) -> ScheduleQuery<'_> {
         self.schedule(group_id).today()
     }
 
@@ -207,7 +207,7 @@ impl Client {
     /// # Arguments
     ///
     /// * `group_id` - The ID of the student group
-    pub fn tomorrow(&self, group_id: u32) -> ScheduleQuery {
+    pub fn tomorrow(&self, group_id: u32) -> ScheduleQuery<'_> {
         self.schedule(group_id).tomorrow()
     }
 
