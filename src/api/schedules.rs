@@ -98,15 +98,16 @@ impl<'a> ScheduleQuery<'a> {
     }
 
     pub async fn send(self) -> Result<Vec<Schedule>> {
-        // CRITICAL FIX: validate was defined but never called!
         self.validate()?;
 
         let query = self.build_query_string();
         let path = format!("/groups/{}/schedules{}", self.group_id, query);
-        let _url = format!("{}{}", self.client.base_url(), path);
 
         #[cfg(feature = "logging")]
+        let url = format!("{}{}", self.client.base_url(), path);
+        #[cfg(feature = "logging")]
         tracing::info!("ScheduleQuery URL: {}", url);
+
         self.client.get_json(&path).await
     }
 }
