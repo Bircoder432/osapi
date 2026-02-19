@@ -1,9 +1,9 @@
-# OSARS Client Library
+ # OSARS Client Library
 
 A comprehensive Rust client library for interacting with the OpenScheduleAPI. This library provides type-safe access to college, campus, group, and schedule data from educational institutions through the OpenScheduleAPI backend.
 
 **Built for OpenScheduleAPI**  
-GitHub: [thisishyum/OpenScheduleApi](https://github.com/thisishyum/OpenScheduleApi)
+GitHub: [thisishyum/OpenScheduleApi](https://github.com/thisishyum/OpenScheduleApi )
 
 ## Features
 
@@ -21,14 +21,14 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-osars = "0.1.0"
+osars = "0.3.0"
 ```
 
 For logging support, enable the feature:
 
 ```toml
 [dependencies]
-osars = { version = "0.1.0", features = ["logging"] }
+osars = { version = "0.3.0", features = ["logging"] }
 ```
 
 ## Quick Start
@@ -39,7 +39,7 @@ use osars::Client;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize client with OpenScheduleAPI endpoint
-    let client = Client::new("https://api.thisishyum.ru/schedule_api/tyumen/");
+    let client = Client::new("https://api.thisishyum.ru/schedule_api/tyumen");
 
     // List all colleges from OpenScheduleAPI
     let colleges = client.colleges().send().await?;
@@ -91,13 +91,13 @@ The main entry point that manages OpenScheduleAPI connections and provides query
 
 ```rust
 // Basic client for OpenScheduleAPI
-let client = Client::new("https://api.thisishyum.ru/schedule_api/tyumen/");
+let client = Client::new("https://api.thisishyum.ru/schedule_api/tyumen");
 
 // Client with custom HTTP configuration for OpenScheduleAPI
 let http_client = reqwest::Client::builder()
     .timeout(std::time::Duration::from_secs(30))
     .build()?;
-let client = Client::with_client("https://api.thisishyum.ru/schedule_api/tyumen/", http_client);
+let client = Client::with_client("https://api.thisishyum.ru/schedule_api/tyumen", http_client);
 
 // Client with default college for OpenScheduleAPI queries
 let client = client.with_college(123);
@@ -127,7 +127,7 @@ client.schedule(456)
     .send().await?;
 
 client.schedule(456)
-    .date("2024-01-15")
+    .date("15-01-2024")  // Format: dd-mm-yyyy
     .send().await?;
 ```
 
@@ -234,6 +234,9 @@ match client.colleges().send().await {
     Err(Error::NotFound(msg)) => {
         eprintln!("Resource not found in OpenScheduleAPI: {}", msg);
     }
+    Err(Error::Unauthorized) => {
+        eprintln!("Authentication required for this endpoint");
+    }
 }
 ```
 
@@ -241,37 +244,42 @@ match client.colleges().send().await {
 
 ```rust
 // For different OpenScheduleAPI instances
-let tyumen_client = Client::new("https://api.thisishyum.ru/schedule_api/tyumen/");
-let other_client = Client::new("https://api.example.com/schedule_api/");
+let tyumen_client = Client::new("https://api.thisishyum.ru/schedule_api/tyumen");
+let other_client = Client::new("https://api.example.com/schedule_api");
 ```
 
 ### Logging with OpenScheduleAPI
 
-Enable the logging feature and initialize:
+Enable the logging feature and initialize tracing in your application:
 
 ```rust
-use osars::logging;
+use tracing_subscriber::EnvFilter;
 
-// Initialize logging
-logging::init();
+#[tokio::main]
+async fn main() {
+    // Initialize tracing
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
 
-let client = Client::new("https://api.thisishyum.ru/schedule_api/tyumen/");
-// All OpenScheduleAPI requests and responses will be logged
+    let client = Client::new("https://api.thisishyum.ru/schedule_api/tyumen");
+    // All OpenScheduleAPI requests and responses will be logged
+}
 ```
 
 ## Testing
 
-The library includes comprehensive tests against the actual OpenScheduleAPI:
+The library includes comprehensive tests:
 
 ```bash
 # Run unit tests
 cargo test
 
-# Run integration tests against OpenScheduleAPI
-cargo test --test integration_test
+# Run integration tests with mock server
+cargo test --test integration
 
-# Run documentation tests
-cargo test --doc
+# Run all tests with logging
+RUST_LOG=debug cargo test
 ```
 
 ## API Reference
@@ -288,10 +296,11 @@ cargo test --doc
 - `schedule(group_id)` - Query schedule for group
 - `today(group_id)` - Query today's schedule
 - `tomorrow(group_id)` - Query tomorrow's schedule
+- `authenticated()` - Create authenticated client for private endpoints
 
 ### Query Parameters
 - `name(pattern)` - Filter by name pattern
-- `date("YYYY-MM-DD")` - Specific date schedule
+- `date("dd-mm-yyyy")` - Specific date schedule (OpenScheduleAPI format)
 - `week(Week)` - Week-based schedule (Previous/Current/Next)
 - `weekday(Weekday)` - Specific weekday schedule
 - `today()` - Today's schedule
@@ -303,12 +312,12 @@ This client library is designed to work with the OpenScheduleAPI project. For is
 
 ## License
 
-This project is licensed under the same license as the OpenScheduleAPI project.
+MIT License - see [LICENSE](LICENSE) for details.
 
 ## Related Projects
 
 - [OpenScheduleAPI](https://github.com/thisishyum/OpenScheduleApi) - The main API backend
-- OpenScheduleAPI Documentation - Comprehensive API documentation
+- [osatui](https://github.com/bircoder432/osatui) - Terminal UI client using this library
 
 ## Support
 
