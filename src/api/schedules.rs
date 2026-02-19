@@ -1,5 +1,8 @@
 use crate::models::{Day, Week, Weekday};
-use crate::{Client, Schedule, error::Result};
+use crate::{
+    Client, Schedule,
+    error::{Error, Result},
+};
 
 pub struct ScheduleQuery<'a> {
     client: &'a Client,
@@ -47,43 +50,18 @@ impl<'a> ScheduleQuery<'a> {
         self
     }
 
-    pub async fn send(self) -> Result<Vec<Schedule>> {
-        let mut params = Vec::new();
-
-        if let Some(date) = self.date {
-            params.push(format!("date={}", date));
-        }
-        if let Some(day) = self.day {
-            params.push(format!("day={}", day));
-        }
-        if let Some(week) = self.week {
-            params.push(format!("week={}", week));
-        }
-        if let Some(weekday) = self.weekday {
-            params.push(format!("weekday={}", weekday));
-        }
-
-        let query = if params.is_empty() {
-            "".to_string()
-        } else {
-            format!("?{}", params.join("&"))
-        };
-
-        let path = format!("/groups/{}/schedules{}", self.group_id, query);
-        self.client.get_json(&path).await
-    }
-
     fn validate(&self) -> Result<()> {
+        // Check for incompatible parameter combinations
         if self.date.is_some()
             && (self.week.is_some() || self.weekday.is_some() || self.day.is_some())
         {
-            return Err(crate::error::Error::Validation(
+            return Err(Error::Validation(
                 "parameter 'date' cannot be combined with 'week', 'weekday' or 'day'".to_string(),
             ));
         }
 
         if self.day.is_some() && (self.week.is_some() || self.weekday.is_some()) {
-            return Err(crate::error::Error::Validation(
+            return Err(Error::Validation(
                 "parameter 'day' cannot be combined with 'week' or 'weekday'".to_string(),
             ));
         }
@@ -91,57 +69,69 @@ impl<'a> ScheduleQuery<'a> {
         Ok(())
     }
 
-    fn add_query_params(self, request: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
-        let mut request = request;
+    fn build_query_string(&self) -> String {
+        let mut params: Vec<(String, String)> = Vec::new();
 
-        if let Some(date) = self.date {
-            request = request.query(&[("date", date)]);
+        if let Some(ref date) = self.date {
+            params.push(("date".to_string(), date.clone()));
+        }
+        if let Some(ref day) = self.day {
+            params.push(("day".to_string(), day.to_string()));
+        }
+        if let Some(ref week) = self.week {
+            params.push(("week".to_string(), week.to_string()));
+        }
+        if let Some(ref weekday) = self.weekday {
+            params.push(("weekday".to_string(), weekday.to_string()));
         }
 
-        if let Some(week) = self.week {
-            let week_str = match week {
-                Week::Previous => "previous",
-                Week::Current => "current",
-                Week::Next => "next",
-            };
-            request = request.query(&[("week", week_str)]);
+        if params.is_empty() {
+            String::new()
+        } else {
+            let query = params
+                .iter()
+                .map(|(k, v)| format!("{}={}", k, v))
+                .collect::<Vec<_>>()
+                .join("&");
+            format!("?{}", query)
         }
+    }
 
-        if let Some(weekday) = self.weekday {
-            let weekday_str = match weekday {
-                Weekday::Monday => "monday",
-                Weekday::Tuesday => "tuesday",
-                Weekday::Wednesday => "wednesday",
-                Weekday::Thursday => "thursday",
-                Weekday::Friday => "friday",
-                Weekday::Saturday => "saturday",
-                Weekday::Sunday => "sunday",
-            };
-            request = request.query(&[("weekday", weekday_str)]);
-        }
+    pub async fn send(self) -> Result<Vec<Schedule>> {
+        // CRITICAL FIX: validate was defined but never called!
+        self.validate()?;
 
-        if let Some(day) = self.day {
-            let day_str = match day {
-                Day::Today => "today",
-                Day::Tomorrow => "tomorrow",
-            };
-            request = request.query(&[("day", day_str)]);
-        }
+        let query = self.build_query_string();
+        let path = format!("/groups/{}/schedules{}", self.group_id, query);
+        let url = format!("{}{}", self.client.base_url(), path);
 
-        request
+        #[cfg(feature = "logging")]
+        tracing::info!("ScheduleQuery URL: {}", url);
+        self.client.get_json(&path).await
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mockito::{Server, ServerOpts};
 
     #[test]
-    fn test_schedule_query_validation() {
+    fn test_schedule_query_validation_date_with_week() {
         let client = Client::new("https://api.example.com");
         let query = ScheduleQuery::new(&client, 1)
             .date("2023-01-01")
             .week(Week::Current);
+
+        let result = query.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("date"));
+    }
+
+    #[test]
+    fn test_schedule_query_validation_day_with_week() {
+        let client = Client::new("https://api.example.com");
+        let query = ScheduleQuery::new(&client, 1).today().week(Week::Current);
 
         let result = query.validate();
         assert!(result.is_err());
@@ -154,5 +144,69 @@ mod tests {
 
         let result = query.validate();
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_schedule_query_build_empty() {
+        let client = Client::new("https://api.example.com");
+        let query = ScheduleQuery::new(&client, 1);
+
+        assert_eq!(query.build_query_string(), "");
+    }
+
+    #[test]
+    fn test_schedule_query_build_with_date() {
+        let client = Client::new("https://api.example.com");
+        let query = ScheduleQuery::new(&client, 1).date("2024-01-15");
+
+        assert_eq!(query.build_query_string(), "?date=2024-01-15");
+    }
+
+    #[test]
+    fn test_schedule_query_build_complex() {
+        let client = Client::new("https://api.example.com");
+        let query = ScheduleQuery::new(&client, 1)
+            .week(Week::Current)
+            .weekday(Weekday::Monday);
+
+        let qs = query.build_query_string();
+        assert!(qs.contains("week=current"));
+        assert!(qs.contains("weekday=monday"));
+    }
+
+    #[tokio::test]
+    async fn test_schedule_query_send_success() {
+        let mut server = Server::new_async().await;
+
+        let mock = server
+            .mock("GET", "/groups/1/schedules")
+            .match_query(mockito::Matcher::UrlEncoded("day".into(), "today".into()))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"[{"groupId": 1, "date": "2024-01-15", "lessons": []}]"#)
+            .create_async()
+            .await;
+
+        let client = Client::new(&server.url());
+        let schedules = client.schedule(1).today().send().await.unwrap();
+
+        assert_eq!(schedules.len(), 1);
+        assert_eq!(schedules[0].group_id, 1);
+
+        mock.assert_async().await;
+    }
+
+    #[tokio::test]
+    async fn test_schedule_query_send_validation_error() {
+        let client = Client::new("https://api.example.com");
+
+        // This should fail validation before making any request
+        let result = client.schedule(1).date("2024-01-15").today().send().await;
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            Error::Validation(_) => (),
+            other => panic!("Expected Validation error, got {:?}", other),
+        }
     }
 }

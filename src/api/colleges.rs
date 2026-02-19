@@ -30,6 +30,7 @@ impl<'a> CollegesQuery<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct CollegeQuery<'a> {
     client: &'a Client,
     college_id: u32,
