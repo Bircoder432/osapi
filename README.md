@@ -28,7 +28,7 @@ For logging support, enable the feature:
 
 ```toml
 [dependencies]
-osars = { version = "0.3.0", features = ["logging"] }
+osars = { version = "0.3.1", features = ["logging"] }
 ```
 
 ## Quick Start
