@@ -21,7 +21,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-osars = "0.3.0"
+osars = "0.3.1"
 ```
 
 For logging support, enable the feature:
